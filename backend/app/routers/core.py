@@ -63,7 +63,7 @@ def list_quarantine():
     conn = connect()
     try:
         rows = conn.execute(
-            "SELECT id, waybill_id, reason, member_json, created_at FROM quarantine ORDER BY id DESC"
+            "SELECT id, waybill_id, reason, member_json, batch_id, created_at FROM quarantine ORDER BY id DESC"
         ).fetchall()
         return [dict(r) for r in rows]
     finally:

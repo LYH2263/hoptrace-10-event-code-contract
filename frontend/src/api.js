@@ -18,6 +18,11 @@ export const api = {
   quarantine: () => req('/api/quarantine'),
   sidecar: () => req('/api/sidecar'),
   ingest: () => req('/api/ingest/run', { method: 'POST' }),
+  contract: () => req('/api/contract'),
+  contractAdd: (event_code, proj_text) =>
+    req('/api/contract/codes', { method: 'POST', body: JSON.stringify({ event_code, proj_text }) }),
+  contractRemove: (code) => req(`/api/contract/codes/${encodeURIComponent(code)}`, { method: 'DELETE' }),
+  contractProof: (batchId) => req(`/api/contract/proof?batch_id=${encodeURIComponent(batchId)}`),
   proofs: (waybillId) =>
     req(waybillId ? `/api/status-proofs?waybill_id=${encodeURIComponent(waybillId)}` : '/api/status-proofs'),
 }

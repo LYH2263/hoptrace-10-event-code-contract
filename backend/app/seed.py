@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from app.db import FIXTURES_DIR, connect
+from app.modules import event_code_contract as ecc
 
 
 SCHEMA = """
@@ -49,19 +50,12 @@ CREATE TABLE IF NOT EXISTS status_proofs (
 );
 """
 
-EVENT_STATUS = {
-    "PICKED": "已揽收",
-    "IN_TRANSIT": "运输中",
-    "ARRIVED_HUB": "到站",
-    "OUT_FOR_DELIVERY": "派送中",
-    "DELIVERED": "已签收",
-    "EXCEPTION": "异常",
-}
-
 
 def init_db():
     conn = connect()
     conn.executescript(SCHEMA)
+    ecc.ensure_tables(conn)
+    ecc.seed_default(conn)
     n = conn.execute("SELECT COUNT(*) AS c FROM waybills").fetchone()["c"]
     if n == 0:
         _seed_fixtures(conn)
@@ -96,6 +90,8 @@ def _seed_fixtures(conn):
 
 
 def _refresh_projections(conn):
+    contract = ecc.current_contract(conn)
+    items = contract["items"]
     rows = conn.execute(
         """
         SELECT h.waybill_id, h.id, h.event_code
@@ -109,13 +105,9 @@ def _refresh_projections(conn):
         """
     ).fetchall()
     for r in rows:
-        proj = EVENT_STATUS.get(r["event_code"], "未知")
+        proj = items.get(r["event_code"], "未知")
         conn.execute("UPDATE waybills SET status_proj=? WHERE id=?", (proj, r["waybill_id"]))
         conn.execute(
             "INSERT INTO status_proofs(waybill_id, last_hop_id, mapped_code, proj_value, created_at) VALUES (?,?,?,?,datetime('now'))",
             (r["waybill_id"], r["id"], r["event_code"], proj),
         )
-
-
-def map_status(event_code: str) -> str:
-    return EVENT_STATUS.get(event_code, "未知")
